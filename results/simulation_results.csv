@@ -1,0 +1,5 @@
+device,device_type,claimed_score,observed_score,accepted,reason,priority_active
+Device 1,Honest,45,45,True,accepted,True
+Device 2,Honest,250,250,True,accepted,True
+Device 3,Honest,750,750,True,accepted,True
+Device 4,Cheating,900,100,False,Claim does not match observed metrics,False
