@@ -1,5 +1,5 @@
-device,device_type,claimed_score,observed_score,accepted,reason,priority_active
-Device 1,Honest,45,45,True,accepted,True
-Device 2,Honest,250,250,True,accepted,True
-Device 3,Honest,750,750,True,accepted,True
-Device 4,Cheating,900,100,False,Claim does not match observed metrics,False
+device_id,private_score,router_observed_score,claimed_tier,accepted,priority,reason
+device_1,45,45,1,True,True,accepted
+device_2,250,250,2,True,True,accepted
+device_3,750,750,3,True,True,accepted
+device_4,900,100,3,False,False,Claim does not match observed metrics
