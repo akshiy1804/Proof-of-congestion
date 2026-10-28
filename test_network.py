@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from device import build_messages
+from measure import score_from_metrics
 from router import Router
 from router_server import ProtocolServer
 
@@ -41,7 +42,7 @@ class NetworkProtocolTests(unittest.TestCase):
         commit["type"] = "COMMIT"
         commit["device_id"] = device_id
 
-        # Keep tests deterministic; do not rely on actual ping timing.
+        # Use controlled measurements so tests are repeatable.
         fake_measurement = {
             "host": "127.0.0.1",
             "latency_ms": 10.0,
@@ -49,18 +50,25 @@ class NetworkProtocolTests(unittest.TestCase):
             "score": measured_score,
         }
 
-        with patch("router_server.measure_host", return_value=fake_measurement):
+        with patch(
+            "router_server.measure_host",
+            return_value=fake_measurement,
+        ):
             with socket.create_connection(
                 ("127.0.0.1", self.port), timeout=3
             ) as sock:
                 sock.settimeout(3)
+
                 with sock.makefile(
                     "r", encoding="utf-8", newline="\n"
                 ) as reader:
+
                     def receive():
                         line = reader.readline()
                         if not line:
-                            raise ConnectionError("Server closed connection")
+                            raise ConnectionError(
+                                "Server closed connection"
+                            )
                         return json.loads(line)
 
                     def send(message):
@@ -74,7 +82,9 @@ class NetworkProtocolTests(unittest.TestCase):
                     self.assertTrue(ack["accepted"])
 
                     request = receive()
-                    self.assertEqual(request["type"], "REVEAL_REQUEST")
+                    self.assertEqual(
+                        request["type"], "REVEAL_REQUEST"
+                    )
 
                     reveal["type"] = "REVEAL"
                     reveal["session_id"] = request["session_id"]
@@ -84,13 +94,23 @@ class NetworkProtocolTests(unittest.TestCase):
                     return receive()
 
     def test_honest_device_accepted(self):
-        result = self.exchange("honest_net", 50, 50)
+        observed_score = score_from_metrics(10.0, 0.0)
+        result = self.exchange(
+            "honest_net", observed_score, observed_score
+        )
         self.assertTrue(result["accepted"])
         self.assertTrue(result["priority"])
         self.assertEqual(result["tier_id"], 1)
 
     def test_lying_high_tier_rejected(self):
-        result = self.exchange("cheater_net", 750, 50)
+        # Calculate the observed score using the project's formula.
+        observed_score = score_from_metrics(10.0, 0.0)
+
+        # The device claims a high tier, but the measured score is low.
+        result = self.exchange(
+            "cheater_net", 750, observed_score
+        )
+
         self.assertFalse(result["accepted"])
         self.assertFalse(result["priority"])
         self.assertEqual(
